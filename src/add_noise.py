@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
 from functools import partial
+import os
 import numpy as np
 from pydub import AudioSegment
 
@@ -19,7 +20,7 @@ def open_file_entry(entry):
     entry.delete(0, tk.END)
     entry.insert(0, file_path)
 
-def add_noise_to_audio(input_file, output_file, SNR_dB):
+def add_noise_to_audio(input_file, SNR_dB):
     # Read the input audio file
     input_signal, frame_rate = read_mp3(input_file)
 
@@ -53,26 +54,24 @@ def add_noise_to_audio(input_file, output_file, SNR_dB):
     noisy_signal[np.isnan(noisy_signal)] = 0  # Replace NaN with 0
     noisy_signal[np.isinf(noisy_signal)] = 0  # Replace Inf with 0
 
+    # Generate the output file name based on input file and SNR
+    input_filename, input_extension = os.path.splitext(os.path.basename(input_file))
+    output_file = f"{input_filename}_noisy_SNR_{SNR_dB}dB{input_extension}"
+
     # Write the noisy audio as a new MP3 file
     write_mp3(output_file, noisy_signal.astype(np.int16), frame_rate)
-    messagebox.showinfo("Success", "Noisy audio generated successfully!")
+    messagebox.showinfo("Success", f"Noisy audio generated successfully!\nSaved as: {output_file}")
 
-def open_file_entry(entry):
-    file_path = filedialog.askopenfilename()
-    entry.delete(0, tk.END)
-    entry.insert(0, file_path)
-
-def generate_noisy_audio(input_entry, output_entry, snr_slider):
+def generate_noisy_audio(input_entry, snr_slider):
     input_file = input_entry.get()
-    output_file = output_entry.get()
     snr_dB = snr_slider.get()
     
-    if not input_file or not output_file:
-        messagebox.showerror("Error", "Please select input and output files.")
+    if not input_file:
+        messagebox.showerror("Error", "Please select an input file.")
         return
     
     try:
-        add_noise_to_audio(input_file, output_file, snr_dB)
+        add_noise_to_audio(input_file, snr_dB)
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
@@ -88,22 +87,14 @@ input_entry.grid(row=0, column=1, columnspan=2, pady=5)
 input_button = tk.Button(app, text="Browse", command=partial(open_file_entry, input_entry))
 input_button.grid(row=0, column=3, pady=5)
 
-# Output File Entry
-output_label = tk.Label(app, text="Output File:")
-output_label.grid(row=1, column=0, sticky="w", padx=10, pady=5)
-output_entry = tk.Entry(app, width=40)
-output_entry.grid(row=1, column=1, columnspan=2, pady=5)
-output_button = tk.Button(app, text="Browse", command=partial(open_file_entry, output_entry))
-output_button.grid(row=1, column=3, pady=5)
-
 # SNR Slider
 snr_label = tk.Label(app, text="SNR (dB):")
-snr_label.grid(row=2, column=0, sticky="w", padx=10, pady=5)
+snr_label.grid(row=1, column=0, sticky="w", padx=10, pady=5)
 snr_slider = tk.Scale(app, from_=0, to=30, orient="horizontal", length=200)
-snr_slider.grid(row=2, column=1, columnspan=2, pady=5)
+snr_slider.grid(row=1, column=1, columnspan=2, pady=5)
 
 # Generate Noisy Audio Button
-generate_button = tk.Button(app, text="Generate Noisy Audio", command=partial(generate_noisy_audio, input_entry, output_entry, snr_slider))
-generate_button.grid(row=3, column=0, columnspan=4, pady=10)
+generate_button = tk.Button(app, text="Generate Noisy Audio", command=partial(generate_noisy_audio, input_entry, snr_slider))
+generate_button.grid(row=2, column=0, columnspan=4, pady=10)
 
 app.mainloop()
